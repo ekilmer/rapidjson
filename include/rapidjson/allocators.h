@@ -59,25 +59,47 @@ concept Allocator {
 /*! This class is just wrapper for standard C library memory routines.
     \note implements Allocator concept
 */
+#ifdef BINARYNINJACORE_LIBRARY
 class CrtAllocator {
 public:
     static const bool kNeedFree = true;
     void* Malloc(size_t size) { 
         if (size) //  behavior of malloc(0) is implementation defined.
-            return std::malloc(size);
+            return BinaryNinjaCore::bn_malloc<CrtAllocator>(size);
         else
             return NULL; // standardize to returning NULL.
     }
     void* Realloc(void* originalPtr, size_t originalSize, size_t newSize) {
         (void)originalSize;
         if (newSize == 0) {
-            std::free(originalPtr);
+            BinaryNinjaCore::bn_free(originalPtr);
             return NULL;
         }
-        return std::realloc(originalPtr, newSize);
+        return BinaryNinjaCore::bn_realloc<CrtAllocator>(originalPtr, newSize);
     }
-    static void Free(void *ptr) { std::free(ptr); }
+    static void Free(void* ptr) { BinaryNinjaCore::bn_free(ptr); }
 };
+#else
+class CrtAllocator {
+public:
+    static const bool kNeedFree = true;
+    void* Malloc(size_t size) {
+        if (size) //  behavior of malloc(0) is implementation defined.
+            return malloc(size);
+        else
+            return NULL; // standardize to returning NULL.
+    }
+    void* Realloc(void* originalPtr, size_t originalSize, size_t newSize) {
+        (void)originalSize;
+        if (newSize == 0) {
+            free(originalPtr);
+            return NULL;
+        }
+        return realloc(originalPtr, newSize);
+    }
+    static void Free(void* ptr) { free(ptr); }
+};
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // MemoryPoolAllocator
